@@ -14,6 +14,23 @@ jobs:
           ls "$NDK" | head -5
           cmake --version
 
+      - name: Get llama.cpp
+        run: |
+          TAG=""
+          for n in $(seq 5500 5800); do
+            code=$(curl -s -o /dev/null -I -L -w "%{http_code}" "https://github.com/ggml-org/llama.cpp/archive/refs/tags/b$n.tar.gz")
+            if [ "$code" = "200" ]; then TAG="b$n"; break; fi
+          done
+          if [ -z "$TAG" ]; then
+            echo "لم أجد نسخة في النطاق، سأستعمل آخر إصدار رسمي"
+            TAG=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | grep -m1 '"tag_name"' | cut -d'"' -f4)
+          fi
+          echo "استعمال النسخة: $TAG"
+          curl -sL -o llama.tar.gz "https://github.com/ggml-org/llama.cpp/archive/refs/tags/$TAG.tar.gz"
+          mkdir llama-src
+          tar xzf llama.tar.gz -C llama-src --strip-components=1
+          ls llama-src | head
+
       - name: Build arm64-v8a
         id: v8
         run: |
@@ -23,7 +40,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI="$ABI" -DANDROID_PLATFORM=android-26 \
             -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release \
-            -DFETCHCONTENT_BASE_DIR="$PWD/_deps"
+            -DFETCHCONTENT_SOURCE_DIR_LLAMA="$PWD/llama-src"
           if ! cmake --build "build-$ABI" --config Release -j 4; then
             echo "=============== FIRST ERRORS ==============="
             cmake --build "build-$ABI" --config Release -j 1 2>&1 | grep -n -E "error|Error|undefined" -A4 | head -80
@@ -33,7 +50,7 @@ jobs:
           cp "build-$ABI/libchat.so" "out/$ABI/libchat.so"
           "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip" "out/$ABI/libchat.so"
 
-      - name: Build armeabi-v7a (اختياري — إن فشل لا يؤثر على arm64)
+      - name: Build armeabi-v7a (optional)
         id: v7
         continue-on-error: true
         run: |
@@ -43,7 +60,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI="$ABI" -DANDROID_PLATFORM=android-26 \
             -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release \
-            -DFETCHCONTENT_BASE_DIR="$PWD/_deps"
+            -DFETCHCONTENT_SOURCE_DIR_LLAMA="$PWD/llama-src"
           if ! cmake --build "build-$ABI" --config Release -j 4; then
             echo "=============== FIRST ERRORS ==============="
             cmake --build "build-$ABI" --config Release -j 1 2>&1 | grep -n -E "error|Error|undefined" -A4 | head -80
