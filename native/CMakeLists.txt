@@ -26,9 +26,8 @@ endif()
 
 include(FetchContent)
 FetchContent_Declare(llama
-    GIT_REPOSITORY https://github.com/ggml-org/llama.cpp.git
-    GIT_TAG        b5500
-    GIT_SHALLOW    TRUE)
+    URL https://github.com/ggml-org/llama.cpp/archive/refs/tags/b5500.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(llama)
 
 add_library(chat SHARED chat.cpp)
