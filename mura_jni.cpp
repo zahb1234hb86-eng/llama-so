@@ -69,7 +69,7 @@ Java_com_gotplx_mura_ai_MuraNative_nLoad(JNIEnv* env, jclass, jstring jpath, jin
 
 JNIEXPORT void JNICALL
 Java_com_gotplx_mura_ai_MuraNative_nReset(JNIEnv*, jclass) {
-    if (g_ctx) llama_memory_clear(llama_get_memory(g_ctx), true);
+    if (g_ctx) llama_kv_self_clear(g_ctx);
     g_past = 0;
 }
 
